@@ -5,7 +5,7 @@ type BaseType = i64;
 type Line = (BaseType, Vec<BaseType>);
 type Lines = Vec<Line>;
 
-enum Operations {
+enum Operation {
     Add,
     Mul,
 }
@@ -13,12 +13,12 @@ enum Operations {
 struct Node {
     value: BaseType,
     next: BaseType,
-    operation: Operations,
+    operation: Operation,
     position: usize,
 }
 
 impl Node {
-    fn new(value: BaseType, next: BaseType, position: usize, operation: Operations) -> Self {
+    fn new(value: BaseType, next: BaseType, position: usize, operation: Operation) -> Self {
         Self {
             value,
             next,
@@ -47,22 +47,37 @@ fn parse(input: &str) -> Lines {
 
 #[aoc(day7, part1)]
 fn part1(input: &Lines) -> BaseType {
-    input.iter().fold(0, |acc, line| acc + add_combinable(line))
+    input.iter().fold(0, |acc, line| acc + iterative(line))
 }
 
-fn add_combinable(line: &Line) -> BaseType {
+#[aoc(day7, part2)]
+fn part2(input: &Lines) -> BaseType {
+    input.iter().fold(0, |acc, line| acc + recursive(line))
+}
+
+fn concat(n1: BaseType, n2: BaseType) -> BaseType {
+    let mut size = 0;
+    let mut remaining = n2;
+    while remaining > 0 {
+        size += 1;
+        remaining /= 10;
+    }
+    n1 * i64::pow(10, size) + n2
+}
+
+fn iterative(line: &Line) -> BaseType {
     let remaining = &line.1;
 
     let mut todo = vec![];
     let position = remaining.len() - 1;
     let last = remaining[position];
-    todo.push(Node::new(line.0, last, position, Operations::Add));
-    todo.push(Node::new(line.0, last, position, Operations::Mul));
+    todo.push(Node::new(line.0, last, position, Operation::Add));
+    todo.push(Node::new(line.0, last, position, Operation::Mul));
 
     while let Some(n) = todo.pop() {
         let value: BaseType;
         match n.operation {
-            Operations::Mul => {
+            Operation::Mul => {
                 if n.value % n.next == 0 {
                     value = n.value / n.next;
                     if value == 0 {
@@ -72,7 +87,7 @@ fn add_combinable(line: &Line) -> BaseType {
                     continue;
                 }
             }
-            Operations::Add => {
+            Operation::Add => {
                 if n.value - n.next >= 0 {
                     value = n.value - n.next;
                     if value == 0 {
@@ -88,13 +103,13 @@ fn add_combinable(line: &Line) -> BaseType {
                 value,
                 remaining[n.position - 1],
                 n.position - 1,
-                Operations::Add,
+                Operation::Add,
             ));
             todo.push(Node::new(
                 value,
                 remaining[n.position - 1],
                 n.position - 1,
-                Operations::Mul,
+                Operation::Mul,
             ));
         }
     }
@@ -102,9 +117,22 @@ fn add_combinable(line: &Line) -> BaseType {
     0
 }
 
-#[aoc(day7, part2)]
-fn part2(input: &Lines) -> BaseType {
-    todo!()
+fn recursive(line: &Line) -> i64 {
+    if recursive_search(line.0, &line.1, line.1[0], 1) {
+        return line.0;
+    }
+    0
+}
+
+fn recursive_search(total: BaseType, numbers: &Vec<BaseType>, acc: BaseType, pos: usize) -> bool {
+    if pos == numbers.len() {
+        return total == acc;
+    }
+
+    let number = numbers[pos];
+    recursive_search(total, numbers, acc + number, pos + 1)
+        || recursive_search(total, numbers, acc * number, pos + 1)
+        || recursive_search(total, numbers, concat(acc, number), pos + 1)
 }
 
 #[cfg(test)]
@@ -128,6 +156,6 @@ mod tests {
 
     #[test]
     fn part2_example() {
-        assert_eq!(part2(&parse(EXAMPLE)), 0);
+        assert_eq!(part2(&parse(EXAMPLE)), 11387);
     }
 }
