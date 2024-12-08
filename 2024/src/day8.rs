@@ -4,8 +4,13 @@ use std::collections::{BTreeMap, BTreeSet};
 type Position = (i32, i32);
 type Positions = BTreeMap<char, Vec<Position>>;
 
+struct Grid {
+    size: i32,
+    antennas: Vec<Vec<Position>>,
+}
+
 #[aoc_generator(day8)]
-fn parse(input: &str) -> (Positions, i32) {
+fn parse(input: &str) -> Grid {
     let mut positions: Positions = BTreeMap::new();
     let mut size = 0;
     input.lines().enumerate().for_each(|(y, line)| {
@@ -19,20 +24,27 @@ fn parse(input: &str) -> (Positions, i32) {
             }
         })
     });
-    (positions, size)
+    Grid {
+        size,
+        antennas: positions.into_values().collect(),
+    }
 }
 
 #[aoc(day8, part1)]
-fn part1(input: &(Positions, i32)) -> usize {
+fn part1(input: &Grid) -> usize {
     let mut antinodes: BTreeSet<Position> = BTreeSet::new();
-    let antennas = &input.0;
-    let size = input.1;
+    let antennas = &input.antennas;
+    let size = input.size;
 
-    for (_antenna, positions) in antennas.iter() {
-        for position1 in positions.iter() {
-            for position2 in positions.iter() {
-                if position1 != position2 {
-                    antinodes.append(&mut get_antinodes(position1, position2, size));
+    for positions in antennas.iter() {
+        for antenna1 in 0..positions.len() {
+            for antenna2 in antenna1 + 1..positions.len() {
+                let (position1, position2) = (&positions[antenna1], &positions[antenna2]);
+                if let Some(antinode) = get_antinode_n(-1, position1, position2, size) {
+                    antinodes.insert(antinode);
+                }
+                if let Some(antinode) = get_antinode_n(-1, position2, position1, size) {
+                    antinodes.insert(antinode);
                 }
             }
         }
@@ -41,40 +53,42 @@ fn part1(input: &(Positions, i32)) -> usize {
     antinodes.len()
 }
 
-fn get_antinodes(a: &Position, b: &Position, size: i32) -> BTreeSet<Position> {
-    let mut antinodes = BTreeSet::new();
-    let x_diff = i32::abs_diff(a.0, b.0) as i32;
-    let y_diff = i32::abs_diff(a.1, b.1) as i32;
+#[aoc(day8, part2)]
+fn part2(input: &Grid) -> usize {
+    let mut antinodes: BTreeSet<Position> = BTreeSet::new();
+    let antennas = &input.antennas;
+    let size = input.size;
 
-    let (antinode1, antinode2): (Position, Position);
-    if a.0 < b.0 {
-        if a.1 < b.1 {
-            antinode1 = (a.0 - x_diff, a.1 - y_diff);
-            antinode2 = (b.0 + x_diff, b.1 + y_diff);
-        } else {
-            antinode1 = (a.0 - x_diff, a.1 + y_diff);
-            antinode2 = (b.0 + x_diff, b.1 - y_diff);
+    for positions in antennas.iter() {
+        for antenna1 in 0..positions.len() {
+            for antenna2 in antenna1 + 1..positions.len() {
+                let (position1, position2) = (&positions[antenna1], &positions[antenna2]);
+                let mut forward = 0;
+                while let Some(antinode) = get_antinode_n(forward, position1, position2, size) {
+                    antinodes.insert(antinode);
+                    forward += 1;
+                }
+                forward = -1;
+                while let Some(antinode) = get_antinode_n(forward, position1, position2, size) {
+                    antinodes.insert(antinode);
+                    forward -= 1;
+                }
+            }
         }
-    } else if a.1 < b.1 {
-        antinode1 = (a.0 + x_diff, a.1 - y_diff);
-        antinode2 = (b.0 - x_diff, b.1 + y_diff);
-    } else {
-        antinode1 = (a.0 + x_diff, a.1 + y_diff);
-        antinode2 = (b.0 - x_diff, b.1 - y_diff);
     }
 
-    if antinode1.0 >= 0 && antinode1.0 < size && antinode1.1 >= 0 && antinode1.1 < size {
-        antinodes.insert(antinode1);
-    }
-    if antinode2.0 >= 0 && antinode2.0 < size && antinode2.1 >= 0 && antinode2.1 < size {
-        antinodes.insert(antinode2);
-    }
-    antinodes
+    antinodes.len()
 }
 
-#[aoc(day8, part2)]
-fn part2(_input: &(Positions, i32)) -> usize {
-    0
+fn get_antinode_n(n: i32, a: &Position, b: &Position, grid_size: i32) -> Option<Position> {
+    let nx = a.0 * (1 - n) + n * b.0;
+    let ny = a.1 * (1 - n) + n * b.1;
+
+    if nx >= 0 && nx < grid_size && ny >= 0 && ny < grid_size {
+        return Some((nx, ny));
+    }
+
+    None
 }
 
 #[cfg(test)]
@@ -101,6 +115,6 @@ mod tests {
 
     #[test]
     fn part2_example() {
-        assert_eq!(part2(&parse(EXAMPLE)), 0);
+        assert_eq!(part2(&parse(EXAMPLE)), 34);
     }
 }
