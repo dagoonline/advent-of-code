@@ -1,6 +1,6 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 
-#[aoc_generator(day9)]
+#[aoc_generator(day9, part1)]
 fn parse(input: &str) -> Vec<i64> {
     let mut chars = input.chars();
     let mut blocks = vec![];
@@ -41,66 +41,54 @@ fn part1(input: &Vec<i64>) -> i64 {
         compacted[block_space_pointer] = -1;
     }
 
-    checksum(compacted)
-}
-
-fn checksum(v: &[i64]) -> i64 {
-    let mut checksum = 0;
-    for i in 0..v.len() as i64 {
-        if v[i as usize] >= 0 {
-            checksum += i * v[i as usize];
-        }
-    }
-    checksum
+    compacted
+        .iter()
+        .enumerate()
+        .filter(|(_, &n)| n >= 0)
+        .map(|(number, position)| position * number as i64)
+        .sum()
 }
 
 #[aoc(day9, part2)]
-fn part2(input: &Vec<i64>) -> i64 {
-    let compacted = &mut input.clone();
-    let mut current_index = compacted.len() - 1;
-    while current_index > 0 {
-        while current_index > 0 && compacted[current_index] == -1 {
-            current_index -= 1;
-        }
-        let next_number = compacted[current_index];
+fn part2(input: &str) -> u64 {
+    let mut chars = input.chars();
+    let mut file_blocks = vec![];
+    let mut free_blocks = vec![];
+    let mut id: u64 = 0;
+    let mut position: usize = 0;
+    while let Some(block_space) = chars.next() {
+        let file_space = block_space.to_digit(10).unwrap() as usize;
+        file_blocks.push((id, position..position + file_space));
+        position += file_space;
+        id += 1;
 
-        let mut next_number_size = 0;
-        while current_index > 0 && compacted[current_index] == next_number {
-            next_number_size += 1;
-            current_index -= 1
+        if let Some(free_space) = chars.next() {
+            let free_space = free_space.to_digit(10).unwrap() as usize;
+            free_blocks.push(position..position + free_space);
+            position += free_space;
         }
-        let mut start = 0;
-        while start < current_index {
-            while start < compacted.len() && compacted[start] != -1 {
-                start += 1;
-            }
-            let mut next_free_space_size = 0;
-            let mut next_free_space_index = start;
-            while start < compacted.len() && compacted[start] == -1 {
-                next_free_space_size += 1;
-                start += 1;
-            }
-            if next_number_size <= next_free_space_size
-                && start - next_free_space_size < current_index
-            {
-                let mut positions_to_remove = next_number_size;
-                let mut index_to_remove = current_index + 1;
-                while next_number_size > 0 {
-                    compacted[next_free_space_index] = next_number;
-                    next_number_size -= 1;
-                    next_free_space_index += 1;
-                }
-                while positions_to_remove > 0 {
-                    compacted[index_to_remove] = -1;
-                    index_to_remove += 1;
-                    positions_to_remove -= 1;
-                }
-                break;
+    }
+
+    for file in file_blocks.iter_mut().rev() {
+        if let Some((pos, free_space)) =
+            free_blocks.iter_mut().enumerate().find(|(_, free_space)| {
+                free_space.end <= file.1.start && free_space.len() >= file.1.len()
+            })
+        {
+            let size = file.1.len() as u64;
+            file.1 = free_space.start..free_space.start + file.1.len();
+            *free_space = free_space.start + size as usize..free_space.end;
+            #[allow(unstable_name_collisions)]
+            if free_space.is_empty() {
+                free_blocks.remove(pos);
             }
         }
     }
 
-    checksum(compacted)
+    file_blocks
+        .into_iter()
+        .map(|(number, positions)| positions.clone().sum::<usize>() as u64 * number)
+        .sum()
 }
 
 #[cfg(test)]
@@ -112,12 +100,12 @@ mod tests {
     #[test]
     fn part1_example() {
         assert_eq!(part1(&parse(EXAMPLE)), 1928);
-        assert_eq!(part2(&parse("999")), 117);
+        assert_eq!(part1(&parse("999")), 117);
     }
 
     #[test]
     fn part2_example() {
-        assert_eq!(part2(&parse(EXAMPLE)), 2858);
-        assert_eq!(part2(&parse("999")), 117);
+        assert_eq!(part2(EXAMPLE), 2858);
+        assert_eq!(part2("99999"), 432);
     }
 }
