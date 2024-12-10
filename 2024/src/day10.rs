@@ -1,5 +1,5 @@
 use aoc_runner_derive::{aoc, aoc_generator};
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 
 #[aoc_generator(day10)]
 fn parse(input: &str) -> (Vec<Vec<i32>>, Vec<(usize, usize)>) {
@@ -30,19 +30,31 @@ fn parse(input: &str) -> (Vec<Vec<i32>>, Vec<(usize, usize)>) {
 #[aoc(day10, part1)]
 fn part1((board, starting_points): &(Vec<Vec<i32>>, Vec<(usize, usize)>)) -> usize {
     starting_points.iter().fold(0, |acc, &point| {
-        let results = &mut BTreeSet::new();
+        let results = &mut BTreeMap::new();
         search_depth(board, point, results);
-        acc + results.len()
+        acc + results.keys().len()
+    })
+}
+
+#[aoc(day10, part2)]
+fn part2((board, starting_points): &(Vec<Vec<i32>>, Vec<(usize, usize)>)) -> usize {
+    starting_points.iter().fold(0, |acc, &point| {
+        let results = &mut BTreeMap::new();
+        search_depth(board, point, results);
+        acc + results.values().sum::<u32>() as usize
     })
 }
 
 fn search_depth(
     board: &Vec<Vec<i32>>,
     (x, y): (usize, usize),
-    results: &mut BTreeSet<(usize, usize)>,
+    results: &mut BTreeMap<(usize, usize), u32>,
 ) {
     if board[y][x] == 9 {
-        results.insert((x, y));
+        results
+            .entry((x, y))
+            .and_modify(|count| *count += 1)
+            .or_insert(1);
     } else {
         for dy in [-1, 1] {
             let ny = (y as i32 + dy) as usize;
@@ -59,11 +71,6 @@ fn search_depth(
         }
     }
 }
-
-// #[aoc(day10, part2)]
-// fn part2(input: &str) -> usize {
-//     0
-// }
 
 #[cfg(test)]
 mod tests {
@@ -83,8 +90,15 @@ mod tests {
         assert_eq!(part1(&parse(EXAMPLE)), 36);
     }
 
-    // #[test]
-    // fn part2_example() {
-    //     assert_eq!(part2(&parse(EXAMPLE)), 36);
-    // }
+    const EXAMPLE2: &str = "012345
+123456
+234567
+345678
+416789
+567891";
+    #[test]
+    fn part2_example() {
+        assert_eq!(part2(&parse(EXAMPLE)), 81);
+        assert_eq!(part2(&parse(EXAMPLE2)), 227);
+    }
 }
