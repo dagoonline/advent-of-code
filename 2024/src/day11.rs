@@ -1,4 +1,6 @@
 use aoc_runner_derive::{aoc, aoc_generator};
+use std::collections::HashMap;
+
 #[aoc_generator(day11)]
 fn parse(input: &str) -> Vec<u64> {
     input
@@ -8,42 +10,46 @@ fn parse(input: &str) -> Vec<u64> {
 }
 
 #[aoc(day11, part1)]
-fn part1(stones: &Vec<u64>) -> u64 {
+fn part1(stones: &[u64]) -> u64 {
     blink_n(25, stones)
 }
 
 #[aoc(day11, part2)]
-fn part2(stones: &Vec<u64>) -> u64 {
+fn part2(stones: &[u64]) -> u64 {
     blink_n(75, stones)
 }
 
-fn blink(stones: &Vec<u64>) -> Vec<u64> {
-    let mut new_stones = Vec::new();
-    for stone in stones {
-        if *stone == 0 {
-            new_stones.push(1);
-        } else if stone.to_string().len() % 2 == 0 {
-            let stone_str = stone.to_string();
-            let half = stone_str.len() / 2;
-            let left = stone_str[..half].parse::<u64>().unwrap();
-            let right = stone_str[half..].parse::<u64>().unwrap();
-            new_stones.push(left);
-            new_stones.push(right);
-        } else {
-            new_stones.push(stone * 2024);
-        }
+fn blink(n: u16, stone: u64, cache: &mut HashMap<(u64, u16), u64>) -> u64 {
+    if n == 0 {
+        return 1;
     }
-    new_stones
+
+    if cache.contains_key(&(stone, n)) {
+        return *cache.get(&(stone, n)).unwrap();
+    }
+
+    let next = if stone == 0 {
+        blink(n - 1, 1, cache)
+    } else if stone.to_string().len() % 2 == 0 {
+        let stone_str = stone.to_string();
+        let half = stone_str.len() / 2;
+        let left = stone_str[..half].parse::<u64>().unwrap();
+        let right = stone_str[half..].parse::<u64>().unwrap();
+        blink(n - 1, left, cache) + blink(n - 1, right, cache)
+    } else {
+        blink(n - 1, stone * 2024, cache)
+    };
+    cache.insert((stone, n), next);
+    next
 }
 
-fn blink_n(blinks: u64, stones: &Vec<u64>) -> u64 {
-    let mut stones = stones.clone();
+fn blink_n(blinks: u16, stones: &[u64]) -> u64 {
+    let cache = &mut HashMap::new();
 
-    for _ in 0..blinks {
-        stones = blink(&stones);
-    }
-
-    stones.len() as u64
+    stones
+        .iter()
+        .map(|&stone| blink(blinks, stone, cache))
+        .sum()
 }
 
 #[cfg(test)]
