@@ -4,65 +4,136 @@ use std::collections::BTreeSet;
 
 const BORDER: char = '#';
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct Position(i16, i16);
+
+impl Position {
+    fn add(&self, b: &Position) -> Position {
+        Position(self.0 + b.0, self.1 + b.1)
+    }
+
+    fn add_edge(&self, edge: &EdgeCoordinates) -> EdgeCoordinates {
+        (self.add(&edge.0), self.add(&edge.1), self.add(&edge.2))
+    }
+
+    fn cross() -> [Position; 4] {
+        [
+            Position(-1, 0),
+            Position(1, 0),
+            Position(0, -1),
+            Position(0, 1),
+        ]
+    }
+    fn clockwise() -> [Edge; 4] {
+        [
+            Edge::TopRight,
+            Edge::BottomRight,
+            Edge::BottomLeft,
+            Edge::TopLeft,
+        ]
+    }
+}
+
+impl Into<Position> for (usize, usize) {
+    fn into(self) -> Position {
+        Position(self.0 as i16, self.1 as i16)
+    }
+}
+
+#[derive(PartialEq)]
+enum Angle {
+    Inner,
+    Outer,
+    None,
+}
+
+type EdgeCoordinates = (Position, Position, Position);
+enum Edge {
+    TopRight,
+    BottomRight,
+    BottomLeft,
+    TopLeft,
+}
+
+impl<'a> Into<&'a EdgeCoordinates> for Edge {
+    fn into(self) -> &'a EdgeCoordinates {
+        match self {
+            Self::TopRight => &(Position(0, -1), Position(1, -1), Position(1, 0)),
+            Self::BottomRight => &(Position(1, 0), Position(1, 1), Position(0, 1)),
+            Self::BottomLeft => &(Position(0, 1), Position(-1, 1), Position(-1, 0)),
+            Self::TopLeft => &(Position(-1, 0), Position(-1, -1), Position(0, -1)),
+        }
+    }
+}
+
 #[derive(Debug)]
 struct Region {
-    positions: BTreeSet<(i16, i16)>,
+    positions: BTreeSet<Position>,
     area: i64,
-    perimeter: i64,
-    sides: i64,
 }
 
 impl Region {
-    fn new(position: (i16, i16)) -> Self {
+    fn new(position: Position) -> Self {
         let mut positions = BTreeSet::new();
         positions.insert(position);
 
-        Self {
-            positions,
-            area: 1,
-            perimeter: 4,
-            sides: 4,
-        }
+        Self { positions, area: 1 }
     }
 
-    fn insert(&mut self, (x, y): (i16, i16)) {
-        if self.positions.contains(&(x, y)) {
+    fn insert(&mut self, position: Position) {
+        if self.positions.contains(&position) {
             return;
         }
 
         self.area += 1;
-        let mut xneighbours = 0;
-        for dx in [-1, 1] {
-            if self.positions.contains(&(x + dx, y)) {
-                xneighbours += 1;
-            }
-        }
-        let mut yneighbours = 0;
-        for dy in [-1, 1] {
-            if self.positions.contains(&(x, y + dy)) {
-                yneighbours += 1;
-            }
-        }
-        let (add_perimeter, add_sides) = match (xneighbours, yneighbours) {
-            (0, 0) => (4, 4),
-            (0, 1) | (1, 0) => (2, 0),
-            (0, 2) | (2, 0) => (0, -2),
-            (1, 1) => (0, -2),
-            (2, 1) | (1, 2) => (-2, -2),
-            (2, 2) => (-4, -4),
-            _ => unreachable!(),
-        };
-        self.positions.insert((x, y));
-        self.perimeter += add_perimeter;
-        self.sides += add_sides;
+        self.positions.insert(position);
     }
 
-    fn get_area(&self) -> i64 {
+    fn area(&self) -> i64 {
         self.area
     }
 
-    fn get_perimeter(&self) -> i64 {
-        self.perimeter
+    fn neighbour_count(&self, position: &Position) -> i64 {
+        Position::cross()
+            .into_iter()
+            .filter(|cross| self.positions.contains(&position.add(cross)))
+            .count() as i64
+    }
+
+    fn compute_sides(&self, position: &Position, edge: &EdgeCoordinates) -> Angle {
+        let absolute = position.add_edge(edge);
+        if !self.positions.contains(&absolute.0) && !self.positions.contains(&absolute.2) {
+            return Angle::Outer;
+        }
+
+        if self.positions.contains(&absolute.0)
+            && !self.positions.contains(&absolute.1)
+            && self.positions.contains(&absolute.2)
+        {
+            return Angle::Inner;
+        }
+
+        Angle::None
+    }
+
+    fn perimeter(&self) -> i64 {
+        self.positions
+            .iter()
+            .map(|position| 4 - self.neighbour_count(position))
+            .sum()
+    }
+
+    fn sides(&self) -> i64 {
+        self.positions
+            .iter()
+            .map(|position| {
+                Position::clockwise()
+                    .into_iter()
+                    .map(|edge| self.compute_sides(position, edge.into()))
+                    .filter(|angle| *angle != Angle::None)
+                    .count() as i64
+            })
+            .sum()
     }
 }
 
@@ -98,7 +169,7 @@ fn parse(input: &str) -> Vec<Region> {
         }
 
         let char = board[y][x];
-        let mut region = Region::new((x as i16, y as i16));
+        let mut region = Region::new((x, y).into());
         let mut same_region = Vec::new();
         same_region.push((x, y));
 
@@ -111,7 +182,7 @@ fn parse(input: &str) -> Vec<Region> {
                     let ny = y.saturating_add_signed(dy as isize);
 
                     if board[ny][nx] == char {
-                        region.insert((nx as i16, ny as i16));
+                        region.insert((nx, ny).into());
                         same_region.push((nx, ny));
                     } else if board[ny][nx] != BORDER {
                         to_visit.insert((nx, ny));
@@ -129,7 +200,15 @@ fn parse(input: &str) -> Vec<Region> {
 fn part1(regions: &[Region]) -> i64 {
     regions
         .iter()
-        .map(|region| region.get_area() * region.get_perimeter())
+        .map(|region| region.area() * region.perimeter())
+        .sum()
+}
+
+#[aoc(day12, part2)]
+fn part2(regions: &[Region]) -> i64 {
+    regions
+        .iter()
+        .map(|region| region.area() * region.sides())
         .sum()
 }
 
@@ -160,10 +239,30 @@ MIIIIIJJEE
 MIIISIJEEE
 MMMISSJEEE";
 
+    const EXAMPLE4: &str = "EEEEE
+EXXXX
+EEEEE
+EXXXX
+EEEEE";
+
+    const EXAMPLE5: &str = "AAAAAA
+AAABBA
+AAABBA
+ABBAAA
+ABBAAA
+AAAAAA";
+
     #[test]
     fn part1_example() {
         assert_eq!(part1(&parse(EXAMPLE)), 140);
         assert_eq!(part1(&parse(EXAMPLE2)), 772);
         assert_eq!(part1(&parse(EXAMPLE3)), 1930);
+    }
+
+    #[test]
+    fn part2_example() {
+        assert_eq!(part2(&parse(EXAMPLE)), 80);
+        assert_eq!(part2(&parse(EXAMPLE4)), 236);
+        assert_eq!(part2(&parse(EXAMPLE5)), 368);
     }
 }
