@@ -1,6 +1,11 @@
-use std::ops::{AddAssign, Range};
+use core::fmt;
+use std::{
+    fmt::Display,
+    ops::{AddAssign, Range},
+};
 
 use aoc_runner_derive::{aoc, aoc_generator};
+use itertools::Itertools;
 
 #[derive(Debug, Clone)]
 struct Position(i32, i32);
@@ -40,6 +45,27 @@ struct Space {
     width: u32,
     height: u32,
     robots: Vec<Robot>,
+}
+
+impl Display for Space {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let positions = self
+            .robots
+            .iter()
+            .map(|robot| (robot.position.0, robot.position.1))
+            .collect_vec();
+        for y in 0..self.height as i32 {
+            for x in 0..self.width as i32 {
+                if positions.contains(&(x, y)) {
+                    write!(f, "#")?
+                } else {
+                    write!(f, ".")?
+                }
+            }
+            writeln!(f)?
+        }
+        writeln!(f, "{}", "=".repeat(self.width as usize))
+    }
 }
 
 impl Space {
@@ -118,15 +144,24 @@ fn parse(input: &str) -> Vec<Robot> {
     robots
 }
 
-fn simulation(robots: &[Robot], space_width: u32, space_height: u32) -> u32 {
+fn simulation(
+    robots: &[Robot],
+    space_width: u32,
+    space_height: u32,
+    steps: u32,
+    display: bool,
+) -> u32 {
     let mut space = Space::new(space_width, space_height);
 
     for robot in robots {
         space.add_robot(robot);
     }
 
-    for _ in 0..100 {
+    for i in 0..steps {
         space.step();
+        if display {
+            print!("iteration: {}\n{}", i + 1, space);
+        }
     }
 
     space.count_by_quadrant().into_iter().product()
@@ -134,7 +169,12 @@ fn simulation(robots: &[Robot], space_width: u32, space_height: u32) -> u32 {
 
 #[aoc(day14, part1)]
 fn part1(input: &[Robot]) -> u32 {
-    simulation(input, 101, 103)
+    simulation(input, 101, 103, 100, false)
+}
+
+#[aoc(day14, part2)]
+fn part2(input: &[Robot]) -> u32 {
+    simulation(input, 101, 103, 10000, true)
 }
 
 #[cfg(test)]
@@ -156,6 +196,11 @@ p=9,5 v=-3,-3";
 
     #[test]
     fn part1_example() {
-        assert_eq!(simulation(&parse(EXAMPLE), 11, 7), 12);
+        assert_eq!(simulation(&parse(EXAMPLE), 11, 7, 100, false), 12);
+    }
+
+    #[test]
+    fn part2_example() {
+        assert_eq!(simulation(&parse(EXAMPLE), 11, 7, 100, true), 12);
     }
 }
