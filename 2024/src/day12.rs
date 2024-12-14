@@ -34,9 +34,9 @@ impl Position {
     }
 }
 
-impl Into<Position> for (usize, usize) {
-    fn into(self) -> Position {
-        Position(self.0 as i16, self.1 as i16)
+impl From<(usize, usize)> for Position {
+    fn from((x, y): (usize, usize)) -> Position {
+        Position(x as i16, y as i16)
     }
 }
 
@@ -55,13 +55,13 @@ enum Edge {
     TopLeft,
 }
 
-impl<'a> Into<&'a EdgeCoordinates> for Edge {
-    fn into(self) -> &'a EdgeCoordinates {
-        match self {
-            Self::TopRight => &(Position(0, -1), Position(1, -1), Position(1, 0)),
-            Self::BottomRight => &(Position(1, 0), Position(1, 1), Position(0, 1)),
-            Self::BottomLeft => &(Position(0, 1), Position(-1, 1), Position(-1, 0)),
-            Self::TopLeft => &(Position(-1, 0), Position(-1, -1), Position(0, -1)),
+impl From<Edge> for EdgeCoordinates {
+    fn from(ec: Edge) -> EdgeCoordinates {
+        match ec {
+            Edge::TopRight => (Position(0, -1), Position(1, -1), Position(1, 0)),
+            Edge::BottomRight => (Position(1, 0), Position(1, 1), Position(0, 1)),
+            Edge::BottomLeft => (Position(0, 1), Position(-1, 1), Position(-1, 0)),
+            Edge::TopLeft => (Position(-1, 0), Position(-1, -1), Position(0, -1)),
         }
     }
 }
@@ -129,7 +129,7 @@ impl Region {
             .map(|position| {
                 Position::clockwise()
                     .into_iter()
-                    .map(|edge| self.compute_sides(position, edge.into()))
+                    .map(|edge| self.compute_sides(position, &edge.into()))
                     .filter(|angle| *angle != Angle::None)
                     .count() as i64
             })

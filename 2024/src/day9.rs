@@ -21,8 +21,8 @@ fn parse(input: &str) -> Vec<i64> {
 }
 
 #[aoc(day9, part1)]
-fn part1(input: &Vec<i64>) -> i64 {
-    let compacted = &mut input.clone();
+fn part1(input: &[i64]) -> i64 {
+    let compacted = &mut input.to_owned();
     let mut free_space_pointer = 0;
     let mut block_space_pointer = compacted.len() - 1;
 
