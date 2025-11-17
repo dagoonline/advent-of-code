@@ -69,6 +69,8 @@ mod tests {
 
     #[test]
     fn part2_example() {
-        assert_eq!(part2(&parse2("<EXAMPLE>")), "<RESULT>");
+        assert_eq!(part2(&parse2("^v")), 3);
+        assert_eq!(part2(&parse2("^>v<")), 3);
+        assert_eq!(part2(&parse2("^v^v^v^v^v")), 11);
     }
 }
