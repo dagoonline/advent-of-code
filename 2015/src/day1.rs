@@ -1,20 +1,12 @@
 use std::fmt::{self, Display};
 
-use aoc_runner_derive::{aoc, aoc_generator};
-#[aoc_generator(day1)]
-fn parse(input: &str) -> Vec<i16> {
-    input
-        .chars()
-        .map(|c| match c {
-            '(' => 1,
-            _ => -1,
-        })
-        .collect()
-}
-
+use aoc_runner_derive::aoc;
 #[aoc(day1, part1)]
-fn part1(input: &[i16]) -> i16 {
-    input.iter().sum()
+fn part1(input: &str) -> i16 {
+    input.chars().fold(0, |acc, c| match c {
+        '(' => acc + 1,
+        _ => acc - 1,
+    })
 }
 
 #[derive(PartialEq, Debug)]
@@ -33,11 +25,14 @@ impl Display for Solution {
 }
 
 #[aoc(day1, part2)]
-fn part2(input: &[i16]) -> Solution {
+fn part2(input: &str) -> Solution {
     let mut floor = 0;
 
-    for (index, &movement) in input.iter().enumerate() {
-        floor += movement;
+    for (index, movement) in input.chars().enumerate() {
+        floor += match movement {
+            '(' => 1,
+            _ => -1,
+        };
         if floor == -1 {
             return Solution::Found(index + 1);
         }
@@ -51,20 +46,20 @@ mod tests {
 
     #[test]
     fn part1_example() {
-        assert_eq!(part1(&parse("(())")), 0);
-        assert_eq!(part1(&parse("()()")), 0);
-        assert_eq!(part1(&parse("(((")), 3);
-        assert_eq!(part1(&parse("(()(()(")), 3);
-        assert_eq!(part1(&parse("))(((((")), 3);
-        assert_eq!(part1(&parse("())")), -1);
-        assert_eq!(part1(&parse("))(")), -1);
-        assert_eq!(part1(&parse(")))")), -3);
-        assert_eq!(part1(&parse(")())())")), -3);
+        assert_eq!(part1("(())"), 0);
+        assert_eq!(part1("()()"), 0);
+        assert_eq!(part1("((("), 3);
+        assert_eq!(part1("(()(()("), 3);
+        assert_eq!(part1("))((((("), 3);
+        assert_eq!(part1("())"), -1);
+        assert_eq!(part1("))("), -1);
+        assert_eq!(part1(")))"), -3);
+        assert_eq!(part1(")())())"), -3);
     }
 
     #[test]
     fn part2_example() {
-        assert_eq!(part2(&parse(")")), Solution::Found(1));
-        assert_eq!(part2(&parse("()())")), Solution::Found(5));
+        assert_eq!(part2(")"), Solution::Found(1));
+        assert_eq!(part2("()())"), Solution::Found(5));
     }
 }
