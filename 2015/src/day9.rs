@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    u32,
-};
+use std::collections::{HashMap, HashSet};
 
 use aoc_runner_derive::{aoc, aoc_generator};
 use regex::Regex;
@@ -61,6 +58,32 @@ fn min_path(
     }
 }
 
+fn max_path(
+    input: &HashMap<String, HashMap<String, u32>>,
+    from: &String,
+    cities: &Vec<String>,
+    visited: &mut HashSet<String>,
+) -> u32 {
+    if visited.len() == cities.len() {
+        return 0;
+    }
+
+    visited.insert(from.to_owned());
+
+    let mut max = 0;
+    for city in cities {
+        if !visited.contains(city) {
+            let distance = input[from][city] + max_path(input, city, cities, visited);
+            if distance > max {
+                max = distance;
+            }
+        }
+    }
+    visited.remove(from);
+
+    max
+}
+
 #[aoc(day9, part1)]
 fn part1(input: &HashMap<String, HashMap<String, u32>>) -> u32 {
     let cities: Vec<String> = input.keys().cloned().collect();
@@ -75,10 +98,19 @@ fn part1(input: &HashMap<String, HashMap<String, u32>>) -> u32 {
         .to_owned()
 }
 
-// #[aoc(day9, part2)]
-// fn part2(input: &str) -> String {
-//     todo!()
-// }
+#[aoc(day9, part2)]
+fn part2(input: &HashMap<String, HashMap<String, u32>>) -> u32 {
+    let cities: Vec<String> = input.keys().cloned().collect();
+    let mut visited = HashSet::new();
+    cities
+        .iter()
+        .map(|city| max_path(input, city, &cities, &mut visited))
+        .collect::<Vec<u32>>()
+        .iter()
+        .max()
+        .unwrap()
+        .to_owned()
+}
 
 #[cfg(test)]
 mod tests {
@@ -94,10 +126,15 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn part2_example() {
-    //     assert_eq!(part2(&parse("<EXAMPLE>")), "<RESULT>");
-    // }
+    #[test]
+    fn part2_example() {
+        assert_eq!(
+            part2(&parse(
+                "London to Dublin = 464\nLondon to Belfast = 518\nDublin to Belfast = 141"
+            )),
+            982
+        );
+    }
 }
 
 // AC, Tris, Snowdin, Faerun, Tambi, Straylight, Norrath, Straylight, Abre
