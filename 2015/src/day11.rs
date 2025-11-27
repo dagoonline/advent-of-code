@@ -79,8 +79,7 @@ fn part1(input: &str) -> String {
 
 #[aoc(day11, part2)]
 fn part2(input: &str) -> String {
-    let first = part1(input);
-    part1(&next(&first).unwrap())
+    part1(&next(&part1(input)).unwrap())
 }
 
 #[cfg(test)]
