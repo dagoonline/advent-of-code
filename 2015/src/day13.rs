@@ -40,7 +40,6 @@ fn maximize_happiness(
             + input.0[&(first, p.clone())]
             + input.0[&(last.clone(), p.clone())]
             + input.0[&(p.clone(), last)];
-        println!("Finish: {visited:?} + {p}: {value}");
         return value;
     }
 
