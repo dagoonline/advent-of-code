@@ -1,88 +1,81 @@
 use aoc_runner_derive::aoc;
 
-#[derive(Default, Debug, Clone)]
-struct Grid {
-    height: usize,
-    width: usize,
-    rolls: Vec<Vec<bool>>,
-}
+fn parse(input: &str) -> Vec<Vec<bool>> {
+    let mut grid = vec![];
 
-impl From<&str> for Grid {
-    fn from(value: &str) -> Self {
-        let mut g = Grid::default();
-
-        for line in value.lines() {
-            g.width = line.len();
-            g.height += 1;
-            g.rolls.push(line.chars().map(|c| c == '@').collect())
-        }
-
-        g
+    for line in input.lines() {
+        grid.push(line.chars().map(|c| c == '@').collect())
     }
+
+    grid
 }
 
-impl Grid {
-    fn step(&mut self) -> u16 {
-        let snapshot = self.rolls.clone();
+fn get_acceseable(rolls: &[Vec<bool>]) -> Vec<(usize, usize)> {
+    let height = rolls.len();
+    let width = rolls[0].len();
 
-        let mut rolls = 0;
-        let around: [(i16, i16); 8] = [
-            (-1, 0),
-            (-1, -1),
-            (0, -1),
-            (1, -1),
-            (1, 0),
-            (1, 1),
-            (0, 1),
-            (-1, 1),
-        ];
+    let mut acceseables = vec![];
+    let around: [(i16, i16); 8] = [
+        (-1, 0),
+        (-1, -1),
+        (0, -1),
+        (1, -1),
+        (1, 0),
+        (1, 1),
+        (0, 1),
+        (-1, 1),
+    ];
 
-        for (y, row) in snapshot.iter().enumerate() {
-            for (x, &current_on) in row.iter().enumerate() {
-                let mut neighbors = 0;
-                for (dx, dy) in around {
-                    let (x, y) = (x as i16, y as i16);
+    for (y, row) in rolls.iter().enumerate() {
+        for (x, &is_roll) in row.iter().enumerate() {
+            if !is_roll {
+                continue;
+            }
 
-                    if x + dx >= 0
-                        && x + dx < self.width as i16
-                        && y + dy >= 0
-                        && y + dy < self.height as i16
-                        && snapshot[(y + dy) as usize][(x + dx) as usize]
-                    {
-                        neighbors += 1
-                    }
-                }
+            let mut neighbors = 0;
 
-                if current_on && neighbors < 4 {
-                    rolls += 1;
-                    self.rolls[y][x] = false
+            for (dx, dy) in around {
+                let (x, y) = (x as i16, y as i16);
+
+                if x + dx >= 0
+                    && x + dx < width as i16
+                    && y + dy >= 0
+                    && y + dy < height as i16
+                    && rolls[(y + dy) as usize][(x + dx) as usize]
+                {
+                    neighbors += 1
                 }
             }
+            if neighbors < 4 {
+                acceseables.push((x, y));
+            }
         }
-
-        rolls
     }
+
+    acceseables
 }
 
 #[aoc(day4, part1)]
 fn part1(input: &str) -> u16 {
-    let mut g: Grid = input.into();
-
-    g.step()
+    get_acceseable(&parse(input)).len() as u16
 }
 
 #[aoc(day4, part2)]
 fn part2(input: &str) -> u16 {
-    let mut g: Grid = input.into();
+    let mut grid = parse(input);
     let mut acc = 0;
 
-    while let next = g.step()
-        && next != 0
+    while let next = get_acceseable(&grid)
+        && !next.is_empty()
     {
-        acc += next
+        acc += next.len();
+
+        for (x, y) in next.into_iter() {
+            grid[y][x] = false;
+        }
     }
 
-    acc
+    acc as u16
 }
 
 #[cfg(test)]
