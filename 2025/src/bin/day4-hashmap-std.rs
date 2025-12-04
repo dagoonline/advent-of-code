@@ -72,7 +72,7 @@ fn part2(input: &str) -> u16 {
 }
 
 fn main() {
-    let s = include_str!("../input/2025/day4.txt");
+    let s = include_str!("../../input/2025/day4.txt");
 
     println!("part 1: {}", part1(s));
     println!("part 2: {}", part2(s));
