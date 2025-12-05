@@ -8,5 +8,10 @@ ahash = "0.8.12"
 aoc-runner = "0.3.0"
 aoc-runner-derive = "0.3.0"
 foldhash = "0.2.0"
+itertools = "0.14.0"
 nohash = "0.2.0"
 tinyset = "0.5.2"
+
+[profile.release]
+opt-level = 3
+lto = true 
