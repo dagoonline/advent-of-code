@@ -1,23 +1,21 @@
 use aoc_runner_derive::aoc;
-use itertools::Itertools;
 
-fn parse(input: &str) -> (Vec<(u64, u64)>, Vec<u64>) {
+fn parse(input: &str, all: bool) -> (Vec<(u64, u64)>, Vec<u64>) {
     let mut ranges = vec![];
     let mut lines = input.lines();
 
     while let line = lines.next().unwrap()
         && !line.is_empty()
     {
-        let (s, e) = line
-            .split('-')
-            .map(|s| s.parse().unwrap())
-            .next_tuple()
-            .unwrap();
+        let (s, e) = line.split_once('-').unwrap();
 
-        ranges.push((s, e))
+        ranges.push((s.parse().unwrap(), e.parse().unwrap()))
     }
 
     ranges.sort();
+    if !all {
+        return (ranges, vec![]);
+    }
 
     let mut ids = vec![];
     for line in lines {
@@ -29,7 +27,7 @@ fn parse(input: &str) -> (Vec<(u64, u64)>, Vec<u64>) {
 
 #[aoc(day5, part1)]
 fn part1(input: &str) -> u64 {
-    let (ranges, ids) = parse(input);
+    let (ranges, ids) = parse(input, true);
     let mut count = 0;
 
     for i in ids {
@@ -51,11 +49,10 @@ fn part1(input: &str) -> u64 {
 
 #[aoc(day5, part2)]
 fn part2(input: &str) -> u64 {
-    let (ranges, _) = parse(input);
-    let ranges = ranges.into_iter();
+    let (ranges, _) = parse(input, false);
     let (mut count, mut last) = (0, 0);
 
-    for (s, e) in ranges {
+    for (s, e) in ranges.into_iter() {
         if s > last && e > last {
             count += e - s + 1;
             last = e;
