@@ -1,17 +1,5 @@
 use aoc_runner_derive::{aoc, aoc_generator};
-#[aoc_generator(day6)]
-fn parse(input: &str) -> Vec<Col> {
-    let mut lines = input.lines().rev();
-    let mut cols = Col::from_operations(lines.next().unwrap());
 
-    for line in lines {
-        cols.iter_mut().fold(0, |acc, c| c.add_value(line, acc));
-    }
-
-    cols
-}
-
-#[derive(Debug)]
 struct Col {
     values: Vec<String>,
     operation: char,
@@ -19,41 +7,16 @@ struct Col {
 }
 
 impl Col {
-    fn from_operations(ops: &str) -> Vec<Col> {
-        let mut chars = ops.chars();
-        let mut result = vec![];
-
-        let mut col = Col {
+    fn new(operation: char, width: usize) -> Col {
+        Col {
             values: vec![],
-            operation: chars.next().unwrap(),
-            width: 1,
-        };
-
-        for c in chars {
-            match c {
-                ' ' => col.width += 1,
-                v => {
-                    result.push(col);
-                    col = Col {
-                        values: vec![],
-                        operation: v,
-                        width: 1,
-                    }
-                }
-            }
+            operation,
+            width,
         }
-        col.width += 1;
-        result.push(col);
-
-        result
     }
 
-    fn add_value(&mut self, value: &str, from: usize) -> usize {
-        let to = from + self.width - 1;
-
-        self.values.push(value[from..to].to_string());
-
-        to + 1
+    fn add(&mut self, value: String) {
+        self.values.push(value);
     }
 
     fn compute(&self) -> u64 {
@@ -71,11 +34,12 @@ impl Col {
 
     fn transpose(&self) -> Self {
         let mut result = vec![];
-        result.resize(self.width - 1, String::new());
+        result.resize(self.width, String::new());
 
         for (i, r) in result.iter_mut().enumerate() {
             for v in self.values.iter() {
                 let c = v.chars().nth(i).unwrap();
+
                 if c != ' ' {
                     r.push(c)
                 }
@@ -83,7 +47,7 @@ impl Col {
         }
 
         for r in result.iter_mut() {
-            *r = r.chars().rev().collect()
+            *r = r.chars().collect()
         }
 
         Col {
@@ -92,6 +56,35 @@ impl Col {
             ..*self
         }
     }
+}
+
+#[aoc_generator(day6)]
+fn parse(input: &str) -> Vec<Col> {
+    let mut cols = vec![];
+    let mut lines = input.lines().rev();
+
+    let last_line = lines.next().unwrap();
+    let mut op = last_line[0..1].chars().next().unwrap();
+    let mut start = 0;
+
+    for (end, current) in last_line.chars().enumerate().skip(1) {
+        if current != ' ' {
+            cols.push(Col::new(op, end - start - 1));
+            op = current;
+            start = end;
+        }
+    }
+    cols.push(Col::new(op, last_line.len() - start));
+
+    for line in lines.rev() {
+        let mut start = 0;
+        for col in cols.iter_mut() {
+            col.add(line[start..start + col.width].to_string());
+            start += col.width + 1;
+        }
+    }
+
+    cols
 }
 
 #[aoc(day6, part1)]
