@@ -3,12 +3,12 @@ use foldhash::{HashMap, HashMapExt, HashSet, HashSetExt};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Tile {
-    pub x: i64,
-    pub y: i64,
+    pub x: u64,
+    pub y: u64,
 }
 
 impl Tile {
-    pub fn new(x: i64, y: i64) -> Self {
+    pub fn new(x: u64, y: u64) -> Self {
         Tile { x, y }
     }
 }
@@ -97,6 +97,7 @@ pub fn is_inside(cache: &mut HashMap<Tile, bool>, tile: &Tile, perimeter: &HashS
                 current.x -= 1
             }
         }
+
         current.x -= 1
     }
 
@@ -114,6 +115,7 @@ fn part2(input: &[Tile]) -> u64 {
         let tile1 = &input[i];
         for tile2 in input.iter().skip(i + 1) {
             let size = (tile1.x.abs_diff(tile2.x) + 1) * (tile1.y.abs_diff(tile2.y) + 1);
+
             if tile1.x != tile2.x
                 && tile1.y != tile2.y
                 && size > max
