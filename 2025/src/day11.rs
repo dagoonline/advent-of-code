@@ -3,73 +3,65 @@ use foldhash::{HashMap, HashMapExt};
 
 #[aoc_generator(day11)]
 fn parse(input: &str) -> HashMap<String, Vec<String>> {
-    let mut graph = HashMap::new();
+    let mut graph: HashMap<String, Vec<String>> = HashMap::new();
     for line in input.lines() {
         let (key, rest) = line.split_once(':').unwrap();
         for target in rest.split_whitespace() {
             graph
                 .entry(key.to_string())
-                .and_modify(|v: &mut Vec<String>| v.push(target.into()))
-                .or_insert(vec![target.into()]);
+                .or_default()
+                .push(target.into());
         }
     }
 
     graph
 }
 
-fn paths(input: &HashMap<String, Vec<String>>, key: &str) -> u64 {
-    if key == "out" {
-        return 1;
+fn count_paths(
+    graph: &HashMap<String, Vec<String>>,
+    current: &str,
+    checkpoints: &[&str],
+    mut visited: u32,
+    cache: &mut HashMap<(String, u32), u64>,
+) -> u64 {
+    for (i, &cp) in checkpoints.iter().enumerate() {
+        if current == cp {
+            visited |= 1 << i;
+        }
     }
 
-    input
-        .get(key)
+    if current == "out" {
+        return if visited == (1 << checkpoints.len()) - 1 {
+            1
+        } else {
+            0
+        };
+    }
+
+    let key = (current.to_string(), visited);
+    if let Some(&cached) = cache.get(&key) {
+        return cached;
+    }
+
+    let count = graph
+        .get(current)
         .unwrap()
         .iter()
-        .map(|v| paths(input, v))
-        .sum()
+        .map(|child| count_paths(graph, child, checkpoints, visited, cache))
+        .sum();
+
+    cache.insert(key, count);
+    count
 }
 
 #[aoc(day11, part1)]
 fn part1(input: &HashMap<String, Vec<String>>) -> u64 {
-    paths(input, "you")
-}
-
-fn paths_fft_dac(
-    input: &HashMap<String, Vec<String>>,
-    fft: bool,
-    dac: bool,
-    current: &str,
-    cache: &mut HashMap<(String, bool, bool), u64>,
-) -> u64 {
-    let dac = dac || current == "dac";
-    let fft = fft || current == "fft";
-    let key = (current.to_string(), dac, fft);
-
-    if current == "out" {
-        return if dac && fft { 1 } else { 0 };
-    }
-
-    if cache.contains_key(&key) {
-        return *cache.get(&key).unwrap();
-    }
-
-    let count = input
-        .get(current)
-        .unwrap()
-        .iter()
-        .map(|v| paths_fft_dac(input, fft, dac, v, cache))
-        .sum();
-
-    cache.insert(key, count);
-
-    count
+    count_paths(input, "you", &[], 0, &mut HashMap::new())
 }
 
 #[aoc(day11, part2)]
 fn part2(input: &HashMap<String, Vec<String>>) -> u64 {
-    let mut cache = HashMap::new();
-    paths_fft_dac(input, false, false, "svr", &mut cache)
+    count_paths(input, "svr", &["dac", "fft"], 0, &mut HashMap::new())
 }
 
 #[cfg(test)]
