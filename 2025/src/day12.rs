@@ -1,15 +1,12 @@
 use aoc_runner_derive::{aoc, aoc_generator};
 
-struct Input {
-    /// shapes[type_idx][orient_idx] = cells relative to anchor (sorted raster order)
-    shapes: Vec<Vec<Vec<(i32, i32)>>>,
-    /// (width, height, counts_per_shape_type)
-    regions: Vec<(usize, usize, Vec<usize>)>,
-    /// number of # cells per shape type
-    shape_cells: Vec<usize>,
+pub struct Input {
+    pub shapes: Vec<Vec<Vec<(i32, i32)>>>,
+    pub regions: Vec<(usize, usize, Vec<usize>)>,
+    pub shape_cells: Vec<usize>,
 }
 
-fn normalize(cells: &[(i32, i32)]) -> Vec<(i32, i32)> {
+pub fn normalize(cells: &[(i32, i32)]) -> Vec<(i32, i32)> {
     let min_r = cells.iter().map(|&(r, _)| r).min().unwrap();
     let min_c = cells.iter().map(|&(_, c)| c).min().unwrap();
     let mut result: Vec<(i32, i32)> = cells.iter().map(|&(r, c)| (r - min_r, c - min_c)).collect();
@@ -18,15 +15,15 @@ fn normalize(cells: &[(i32, i32)]) -> Vec<(i32, i32)> {
     result
 }
 
-fn rotate_cw(cells: &[(i32, i32)]) -> Vec<(i32, i32)> {
+pub fn rotate_cw(cells: &[(i32, i32)]) -> Vec<(i32, i32)> {
     normalize(&cells.iter().map(|&(r, c)| (c, -r)).collect::<Vec<_>>())
 }
 
-fn flip_h(cells: &[(i32, i32)]) -> Vec<(i32, i32)> {
+pub fn flip_h(cells: &[(i32, i32)]) -> Vec<(i32, i32)> {
     normalize(&cells.iter().map(|&(r, c)| (r, -c)).collect::<Vec<_>>())
 }
 
-fn all_orientations(cells: &[(i32, i32)]) -> Vec<Vec<(i32, i32)>> {
+pub fn all_orientations(cells: &[(i32, i32)]) -> Vec<Vec<(i32, i32)>> {
     let mut result = Vec::new();
     let mut current = normalize(cells);
 
@@ -45,8 +42,7 @@ fn all_orientations(cells: &[(i32, i32)]) -> Vec<Vec<(i32, i32)>> {
     result
 }
 
-/// Convert cells to be relative to anchor (first cell in raster-sorted order)
-fn relative_to_anchor(cells: &[(i32, i32)]) -> Vec<(i32, i32)> {
+pub fn relative_to_anchor(cells: &[(i32, i32)]) -> Vec<(i32, i32)> {
     let anchor = cells[0];
 
     cells
@@ -56,7 +52,7 @@ fn relative_to_anchor(cells: &[(i32, i32)]) -> Vec<(i32, i32)> {
 }
 
 #[aoc_generator(day12)]
-fn parse(input: &str) -> Input {
+pub fn parse(input: &str) -> Input {
     let mut shapes_raw: Vec<Vec<(i32, i32)>> = Vec::new();
     let mut regions = Vec::new();
     let mut current_shape_lines: Vec<&str> = Vec::new();
@@ -64,7 +60,6 @@ fn parse(input: &str) -> Input {
 
     for line in input.lines() {
         if line.contains('x') && line.contains(':') {
-            // Region line: "WxH: n0 n1 n2 ..."
             let (dims, counts_str) = line.split_once(':').unwrap();
             let (w, h) = dims.trim().split_once('x').unwrap();
             let w: usize = w.parse().unwrap();
@@ -75,7 +70,6 @@ fn parse(input: &str) -> Input {
                 .collect();
             regions.push((w, h, counts));
         } else if line.contains(':') && line.trim().ends_with(':') {
-            // Shape header: "N:"
             if in_shape && !current_shape_lines.is_empty() {
                 shapes_raw.push(parse_shape(&current_shape_lines));
                 current_shape_lines.clear();
@@ -112,7 +106,7 @@ fn parse(input: &str) -> Input {
     }
 }
 
-fn parse_shape(lines: &[&str]) -> Vec<(i32, i32)> {
+pub fn parse_shape(lines: &[&str]) -> Vec<(i32, i32)> {
     let mut cells = Vec::new();
     for (r, line) in lines.iter().enumerate() {
         for (c, ch) in line.chars().enumerate() {
@@ -147,8 +141,6 @@ fn can_fit(
         return true;
     }
 
-    // Build list of shape copies to place, ordered by fewest orientations first
-    // (most constrained shapes first)
     let mut shape_list: Vec<usize> = Vec::new();
     let mut order: Vec<usize> = (0..counts.len()).collect();
     order.sort_by_key(|&i| shapes[i].len());
@@ -175,12 +167,10 @@ fn solve(
     skip_budget: usize,
     search_from: usize,
 ) -> bool {
-    // All shapes placed
     if shape_idx >= shape_list.len() {
         return true;
     }
 
-    // Find first empty cell
     let mut idx = search_from;
     while idx < w * h {
         let r = idx / w;
@@ -191,12 +181,11 @@ fn solve(
         idx += 1;
     }
     if idx >= w * h {
-        return false; // no empty cells but shapes remain
+        return false;
     }
     let r = idx / w;
     let c = idx % w;
 
-    // Remaining cells in grid from this point
     let remaining_cells = w * h - idx;
     let remaining_shape_cells: usize = shape_list[shape_idx..]
         .iter()
@@ -206,12 +195,8 @@ fn solve(
         return false;
     }
 
-    // Try placing each remaining shape type at (r, c)
-    // To avoid redundant search, for consecutive identical shape types,
-    // only try the current one (not later duplicates)
     let current_type = shape_list[shape_idx];
 
-    // Try all orientations of this shape type
     for orient in &shapes[current_type] {
         if try_place(grid, w, h, r, c, orient) {
             place(grid, r, c, orient);
@@ -232,7 +217,6 @@ fn solve(
         }
     }
 
-    // Try skipping this cell (just advance past it)
     if skip_budget > 0
         && solve(
             grid,
@@ -251,7 +235,7 @@ fn solve(
     false
 }
 
-fn try_place(grid: &[u64], w: usize, h: usize, r: usize, c: usize, orient: &[(i32, i32)]) -> bool {
+pub fn try_place(grid: &[u64], w: usize, h: usize, r: usize, c: usize, orient: &[(i32, i32)]) -> bool {
     for &(dr, dc) in orient {
         let nr = r as i32 + dr;
         let nc = c as i32 + dc;
@@ -266,7 +250,7 @@ fn try_place(grid: &[u64], w: usize, h: usize, r: usize, c: usize, orient: &[(i3
     true
 }
 
-fn place(grid: &mut [u64], r: usize, c: usize, orient: &[(i32, i32)]) {
+pub fn place(grid: &mut [u64], r: usize, c: usize, orient: &[(i32, i32)]) {
     for &(dr, dc) in orient {
         let nr = (r as i32 + dr) as usize;
         let nc = (c as i32 + dc) as usize;
@@ -275,7 +259,7 @@ fn place(grid: &mut [u64], r: usize, c: usize, orient: &[(i32, i32)]) {
     }
 }
 
-fn unplace(grid: &mut [u64], r: usize, c: usize, orient: &[(i32, i32)]) {
+pub fn unplace(grid: &mut [u64], r: usize, c: usize, orient: &[(i32, i32)]) {
     for &(dr, dc) in orient {
         let nr = (r as i32 + dr) as usize;
         let nc = (c as i32 + dc) as usize;
